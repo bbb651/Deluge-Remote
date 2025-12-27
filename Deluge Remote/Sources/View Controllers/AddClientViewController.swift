@@ -225,30 +225,38 @@ class AddClientViewController: UITableViewController, Storyboarded {
     }
 
     // MARK: - Table view data source
+    
+    // Helper to check if indexPath is in the dynamic headers section
+    private var headersSectionIndex: Int { return 3 }
+    
+    private func isHeadersSection(_ section: Int) -> Bool {
+        return section == headersSectionIndex
+    }
+    
+    private func isHeadersSection(_ indexPath: IndexPath) -> Bool {
+        return indexPath.section == headersSectionIndex
+    }
 
     override func numberOfSections(in tableView: UITableView) -> Int {
         return 4
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        switch section {
-            case 0: return 1  // Nickname
-            case 1: return 5  // Credentials
-            case 2: return 1  // Test Connection
-            case 3: return customHeaders.count + 1  // Custom headers + Add button
-            default: return 0
+        if isHeadersSection(section) {
+            return customHeaders.count + 1  // Custom headers + Add button
         }
+        return super.tableView(tableView, numberOfRowsInSection: section)
     }
     
     override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        if section == 3 {
+        if isHeadersSection(section) {
             return "Custom HTTP Headers"
         }
         return super.tableView(tableView, titleForHeaderInSection: section)
     }
     
     override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
-        if section == 3 {
+        if isHeadersSection(section) {
             return "Add custom headers to be sent with all requests to the Deluge server. Useful for authentication proxies."
         }
         return super.tableView(tableView, titleForFooterInSection: section)
@@ -256,7 +264,7 @@ class AddClientViewController: UITableViewController, Storyboarded {
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         // For sections 0-2, use the static cells from storyboard
-        if indexPath.section < 3 {
+        if !isHeadersSection(indexPath) {
             return super.tableView(tableView, cellForRowAt: indexPath)
         }
         
@@ -284,7 +292,7 @@ class AddClientViewController: UITableViewController, Storyboarded {
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         
-        guard indexPath.section == 3 else { return }
+        guard isHeadersSection(indexPath) else { return }
         
         if indexPath.row < customHeaders.count {
             editHeader(at: indexPath.row)
@@ -295,11 +303,14 @@ class AddClientViewController: UITableViewController, Storyboarded {
     
     override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
         // Only allow editing (swipe to delete) for existing headers
-        return indexPath.section == 3 && indexPath.row < customHeaders.count
+        if isHeadersSection(indexPath) {
+            return indexPath.row < customHeaders.count
+        }
+        return false
     }
     
     override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
-        if editingStyle == .delete && indexPath.section == 3 && indexPath.row < customHeaders.count {
+        if editingStyle == .delete && isHeadersSection(indexPath) && indexPath.row < customHeaders.count {
             customHeaders.remove(at: indexPath.row)
             tableView.deleteRows(at: [indexPath], with: .automatic)
             // Invalidate the current config since headers changed
@@ -309,9 +320,16 @@ class AddClientViewController: UITableViewController, Storyboarded {
     }
     
     override func tableView(_ tableView: UITableView, indentationLevelForRowAt indexPath: IndexPath) -> Int {
-        if indexPath.section == 3 {
+        if isHeadersSection(indexPath) {
             return 0
         }
         return super.tableView(tableView, indentationLevelForRowAt: indexPath)
+    }
+    
+    override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        if isHeadersSection(indexPath) {
+            return 44
+        }
+        return super.tableView(tableView, heightForRowAt: indexPath)
     }
 }
