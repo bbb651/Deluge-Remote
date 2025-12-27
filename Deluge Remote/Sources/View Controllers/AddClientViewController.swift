@@ -115,6 +115,7 @@ class AddClientViewController: UITableViewController, Storyboarded {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        tableView.allowsSelection = true
         self.navigationItem.rightBarButtonItem?.isEnabled = config != nil
 
         if let config = config {
