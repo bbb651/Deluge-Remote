@@ -18,13 +18,28 @@ struct ClientConfig: Codable, Comparable {
     let isHTTP: Bool
     let url: URL
     let uploadURL: URL
+    let customHeaders: [String: String]
     
     static func < (lhs: ClientConfig, rhs: ClientConfig) -> Bool {
         return lhs.nickname == rhs.nickname && lhs.hostname == rhs.hostname && lhs.relativePath == rhs.relativePath
         && lhs.port == rhs.port && lhs.password == rhs.password && lhs.isHTTP == rhs.isHTTP
     }
     
-    init?(nickname: String, hostname: String, relativePath: String, port: Int, password: String, isHTTP: Bool) {
+    // Custom decoding to handle backward compatibility when customHeaders is not present
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        nickname = try container.decode(String.self, forKey: .nickname)
+        hostname = try container.decode(String.self, forKey: .hostname)
+        relativePath = try container.decode(String.self, forKey: .relativePath)
+        port = try container.decode(Int.self, forKey: .port)
+        password = try container.decode(String.self, forKey: .password)
+        isHTTP = try container.decode(Bool.self, forKey: .isHTTP)
+        url = try container.decode(URL.self, forKey: .url)
+        uploadURL = try container.decode(URL.self, forKey: .uploadURL)
+        customHeaders = try container.decodeIfPresent([String: String].self, forKey: .customHeaders) ?? [:]
+    }
+    
+    init?(nickname: String, hostname: String, relativePath: String, port: Int, password: String, isHTTP: Bool, customHeaders: [String: String] = [:]) {
         
         self.nickname = nickname
         self.hostname = hostname
@@ -32,6 +47,7 @@ struct ClientConfig: Codable, Comparable {
         self.port = port
         self.password = password
         self.isHTTP = isHTTP
+        self.customHeaders = customHeaders
         
         let sslConfig: NetworkSecurity = isHTTP ? .http : .https
         

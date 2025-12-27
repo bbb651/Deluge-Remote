@@ -19,6 +19,9 @@ class AddClientViewController: UITableViewController, Storyboarded {
     @IBOutlet weak var passwordTextField: UITextField!
     @IBOutlet weak var portTableViewCell: UITableViewCell!
     @IBOutlet weak var networkSecurityControl: UISegmentedControl!
+    
+    /// Custom HTTP headers to be sent with all requests
+    var customHeaders: [String: String] = [:]
 
     @IBAction func doneAction(_ sender: UIBarButtonItem) {
         if let onConfigAdded = onConfigAdded, let config = config {
@@ -64,7 +67,8 @@ class AddClientViewController: UITableViewController, Storyboarded {
         
         guard let tempConfig = ClientConfig(nickname: nickname, hostname: hostname,
                                             relativePath: relativePath, port: port,
-                                            password: password, isHTTP: !sslEnabled)
+                                            password: password, isHTTP: !sslEnabled,
+                                            customHeaders: customHeaders)
         else {
             MBProgressHUD.hide(for: self.view, animated: true)
             showAlert(target: self, title: "Invalid Config", message: "Unable to parse a valid URL from the config")
@@ -121,7 +125,23 @@ class AddClientViewController: UITableViewController, Storyboarded {
             portTextField.text = "\(config.port)"
             networkSecurityControl.selectedSegmentIndex = config.isHTTP ? 0 : 1
             passwordTextField.text = config.password
+            customHeaders = config.customHeaders
         }
+    }
+    
+    // MARK: - Custom Headers
+    
+    func showCustomHeadersEditor() {
+        let headersVC = CustomHeadersViewController(style: .insetGrouped)
+        headersVC.headers = customHeaders.map { (key: $0.key, value: $0.value) }
+        headersVC.onHeadersChanged = { [weak self] newHeaders in
+            self?.customHeaders = newHeaders
+            // Invalidate config since headers changed
+            self?.config = nil
+            self?.navigationItem.rightBarButtonItem?.isEnabled = false
+            self?.tableView.reloadData()
+        }
+        navigationController?.pushViewController(headersVC, animated: true)
     }
 
     // MARK: - Table view data source
@@ -133,9 +153,44 @@ class AddClientViewController: UITableViewController, Storyboarded {
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         switch section {
             case 0: return 1
-            case 1: return 5
+            case 1: return 6  // Added custom headers row
             case 2: return 1
             default: return 0
         }
+    }
+    
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        // Custom headers row is the last row in section 1
+        if indexPath.section == 1 && indexPath.row == 5 {
+            let cell = UITableViewCell(style: .value1, reuseIdentifier: "HeadersCell")
+            cell.textLabel?.text = "Custom Headers"
+            cell.detailTextLabel?.text = customHeaders.isEmpty ? "None" : "\(customHeaders.count)"
+            cell.accessoryType = .disclosureIndicator
+            return cell
+        }
+        return super.tableView(tableView, cellForRowAt: indexPath)
+    }
+    
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        if indexPath.section == 1 && indexPath.row == 5 {
+            tableView.deselectRow(at: indexPath, animated: true)
+            showCustomHeadersEditor()
+        }
+    }
+    
+    override func tableView(_ tableView: UITableView, indentationLevelForRowAt indexPath: IndexPath) -> Int {
+        // Custom headers row
+        if indexPath.section == 1 && indexPath.row == 5 {
+            return 0
+        }
+        return super.tableView(tableView, indentationLevelForRowAt: indexPath)
+    }
+    
+    override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        // Custom headers row
+        if indexPath.section == 1 && indexPath.row == 5 {
+            return 44
+        }
+        return super.tableView(tableView, heightForRowAt: indexPath)
     }
 }

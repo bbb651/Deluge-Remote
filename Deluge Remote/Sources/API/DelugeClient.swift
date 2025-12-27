@@ -81,7 +81,13 @@ class DelugeClient {
         let trustManager = ServerTrustManager(evaluators: [self.clientConfig.hostname: DisabledTrustEvaluator()])
         let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = 35
-        configuration.httpAdditionalHeaders = HTTPHeaders.default.dictionary
+        
+        // Merge default headers with custom headers from config
+        var additionalHeaders = HTTPHeaders.default.dictionary
+        for (key, value) in self.clientConfig.customHeaders {
+            additionalHeaders[key] = value
+        }
+        configuration.httpAdditionalHeaders = additionalHeaders
         
         retrier = RetryPolicy(retryLimit: 3,
                               exponentialBackoffBase: RetryPolicy.defaultExponentialBackoffBase,
